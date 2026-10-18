@@ -32,6 +32,7 @@ namespace BPGPUpdater
             CloseButton.Click += (s, e) => Close();
             InstallButton.Click += async (s, e) => await app.InstallAsync();
             CheckButton.Click += async (s, e) => await app.CheckAsync(false);
+            UninstallButton.Click += async (s, e) => await Uninstall();
             BrowseButton.Click += (s, e) => Browse();
             AutostartBox.Click += (s, e) => app.SetAutostart(AutostartBox.IsChecked == true);
             RepoLink.Click += (s, e) => Open("https://github.com/" + GitHubReleases.Repository);
@@ -63,6 +64,7 @@ namespace BPGPUpdater
             InstallButton.Content = InstallText();
             InstallButton.IsEnabled = app.UpdateAvailable && !app.Busy;
             CheckButton.IsEnabled = !app.Busy;
+            UninstallButton.IsEnabled = app.CanUninstall && !app.Busy;
             BrowseButton.IsEnabled = !app.Busy;
 
             ChangelogHeading.Text = app.Latest != null ? "What's new in " + app.Latest.Tag : "What's new";
@@ -108,6 +110,13 @@ namespace BPGPUpdater
             return "Up to date";
         }
 
+        private async System.Threading.Tasks.Task Uninstall()
+        {
+            var dialog = new UninstallDialog(app.SettingsFileCount(), TrayApp.IsWowRunning()) { Owner = this };
+            if (dialog.ShowDialog() != true) return;
+            await app.UninstallAsync(dialog.Choice == UninstallChoice.AddonAndSettings);
+        }
+
         private void Browse()
         {
             using (var dialog = new Forms.FolderBrowserDialog { Description = "Pick your World of Warcraft folder (the one with _retail_ in it).", ShowNewFolderButton = false })
@@ -134,18 +143,30 @@ namespace BPGPUpdater
                 Tabs.SelectedIndex = i;
                 UpdateLayout();
                 Dispatcher.Invoke(new Action(() => { }), System.Windows.Threading.DispatcherPriority.Render);
-                var dpi = VisualTreeHelper.GetDpi(this);
-                var bitmap = new RenderTargetBitmap((int)Math.Ceiling(Root.ActualWidth * dpi.DpiScaleX), (int)Math.Ceiling(Root.ActualHeight * dpi.DpiScaleY),
-                    dpi.PixelsPerInchX, dpi.PixelsPerInchY, PixelFormats.Pbgra32);
-                bitmap.Render(Root);
-                var encoder = new PngBitmapEncoder();
-                encoder.Frames.Add(BitmapFrame.Create(bitmap));
-                using (var stream = File.Create(basePath + "-" + i + ".png"))
-                {
-                    encoder.Save(stream);
-                }
+                SavePng(Root, basePath + "-" + i + ".png");
             }
             Tabs.SelectedIndex = 0;
+
+            // The uninstall dialog, as it looks with settings found
+            var dialog = new UninstallDialog(2, false) { Owner = this };
+            dialog.Show();
+            dialog.UpdateLayout();
+            SavePng((FrameworkElement)dialog.Content, basePath + "-uninstall.png");
+            dialog.Close();
+        }
+
+        private static void SavePng(FrameworkElement element, string path)
+        {
+            var dpi = VisualTreeHelper.GetDpi(element);
+            var bitmap = new RenderTargetBitmap((int)Math.Ceiling(element.ActualWidth * dpi.DpiScaleX), (int)Math.Ceiling(element.ActualHeight * dpi.DpiScaleY),
+                dpi.PixelsPerInchX, dpi.PixelsPerInchY, PixelFormats.Pbgra32);
+            bitmap.Render(element);
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(bitmap));
+            using (var stream = File.Create(path))
+            {
+                encoder.Save(stream);
+            }
         }
 
         /// <summary>Closes the window for real, when the app exits</summary>

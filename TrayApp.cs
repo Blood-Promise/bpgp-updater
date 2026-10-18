@@ -267,6 +267,70 @@ namespace BPGPUpdater
             }
         }
 
+        /// <summary>
+        /// Uninstall is possible when BPGP is a normal folder (installed by us or a copy of the source),
+        /// or when it's gone but its settings are still there. Never for a linked folder.
+        /// </summary>
+        public bool CanUninstall
+        {
+            get
+            {
+                if (RetailFolder == null) return false;
+                switch (Installed.State)
+                {
+                    case AddonState.Installed:
+                    case AddonState.DevBuild: return true;
+                    case AddonState.NotInstalled: return SettingsFileCount() > 0;
+                    default: return false;
+                }
+            }
+        }
+
+        public int SettingsFileCount()
+        {
+            try { return RetailFolder != null ? AddonInstaller.FindSettings(RetailFolder).Length : 0; }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException) { return 0; }
+        }
+
+        public async Task UninstallAsync(bool removeSettings)
+        {
+            if (Busy || !CanUninstall) return;
+            if (removeSettings && IsWowRunning())
+            {
+                SetStatus("Close World of Warcraft first: it writes the BPGP settings back when you log out.", true);
+                return;
+            }
+            Busy = true;
+            SetStatus("Removing BPGP…");
+            try
+            {
+                var addOns = WowLocator.AddOnsFolder(RetailFolder);
+                var retail = RetailFolder;
+                int removed = await Task.Run(() =>
+                {
+                    AddonInstaller.Uninstall(addOns);
+                    return removeSettings ? AddonInstaller.DeleteSettings(retail) : 0;
+                });
+                RefreshInstalled();
+                SetStatus(removeSettings
+                    ? "BPGP and its settings are removed (" + removed + " settings file" + (removed == 1 ? "" : "s") + ")."
+                    : "BPGP is uninstalled. Your BPGP settings and data (WTF folder) are kept." + (IsWowRunning() ? " Restart WoW to unload it." : ""));
+            }
+            catch (UnauthorizedAccessException)
+            {
+                SetStatus("No permission to remove BPGP from the AddOns folder. Close WoW, or run BPGP Updater as administrator.", true);
+            }
+            catch (Exception e) when (e is IOException || e is InvalidOperationException)
+            {
+                SetStatus("Uninstall failed: " + e.Message, true);
+            }
+            finally
+            {
+                Busy = false;
+                Changed?.Invoke();
+            }
+        }
+
         private void RefreshInstalled()
         {
             Installed = RetailFolder != null
@@ -274,7 +338,7 @@ namespace BPGPUpdater
                 : new InstalledAddon { State = AddonState.NotInstalled };
         }
 
-        private static bool IsWowRunning()
+        public static bool IsWowRunning()
         {
             return new[] { "Wow", "WowT", "WowB" }.Any(name => Process.GetProcessesByName(name).Length > 0);
         }

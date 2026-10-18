@@ -97,12 +97,15 @@
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <Button x:Name="InstallButton" Grid.Column="0" Style="{StaticResource PrimaryButton}" Content="Install" IsDefault="True" />
                             <Button x:Name="CheckButton" Grid.Column="1" Content="Check again" Margin="10,0,0,0" />
+                            <Button x:Name="UninstallButton" Grid.Column="2" Content="Uninstall" Margin="10,0,0,0" MinWidth="0"
+                                    ToolTip="Remove BPGP from the AddOns folder, with or without its settings." />
                             <!-- Status line: what the updater is doing or found -->
-                            <TextBlock x:Name="StatusText" Grid.Column="2" Style="{StaticResource Muted}" Margin="14,0,0,0" VerticalAlignment="Center" FontSize="12" />
+                            <TextBlock x:Name="StatusText" Grid.Column="3" Style="{StaticResource Muted}" Margin="14,0,0,0" VerticalAlignment="Center" FontSize="12" />
                         </Grid>
                         <Border Grid.Row="2" Style="{StaticResource Inset}">
                             <DockPanel>

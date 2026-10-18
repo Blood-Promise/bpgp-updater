@@ -89,6 +89,43 @@ namespace BPGPUpdater
             }
         }
 
+        /// <summary>
+        /// Removes AddOns\BPGP. A linked folder (developer setup) is refused, so a recursive delete can
+        /// never reach the git clone behind it. SavedVariables in WTF stay (see DeleteSettings).
+        /// </summary>
+        public static void Uninstall(string addOnsFolder)
+        {
+            var target = Path.Combine(addOnsFolder, AddonName);
+            if (!Directory.Exists(target)) return;
+            if ((File.GetAttributes(target) & FileAttributes.ReparsePoint) != 0)
+                throw new InvalidOperationException("AddOns\\BPGP is linked to a git clone. The updater leaves it alone.");
+            Directory.Delete(target, true);
+        }
+
+        /// <summary>
+        /// BPGP's settings and data on this PC: the SavedVariables files WoW writes for it,
+        /// WTF\Account\&lt;account&gt;\[&lt;realm&gt;\&lt;character&gt;\]SavedVariables\BPGP.lua (and .lua.bak).
+        /// Only these exact names, so other addons' files are never matched.
+        /// </summary>
+        public static string[] FindSettings(string retailFolder)
+        {
+            var accounts = Path.Combine(retailFolder, "WTF", "Account");
+            if (!Directory.Exists(accounts)) return new string[0];
+            return Directory.EnumerateFiles(accounts, AddonName + ".lua*", SearchOption.AllDirectories)
+                .Where(f => string.Equals(Path.GetFileName(Path.GetDirectoryName(f)), "SavedVariables", StringComparison.OrdinalIgnoreCase))
+                .Where(f => string.Equals(Path.GetFileName(f), AddonName + ".lua", StringComparison.OrdinalIgnoreCase)
+                         || string.Equals(Path.GetFileName(f), AddonName + ".lua.bak", StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+        }
+
+        /// <summary>Deletes BPGP's SavedVariables files. Returns how many were removed.</summary>
+        public static int DeleteSettings(string retailFolder)
+        {
+            var files = FindSettings(retailFolder);
+            foreach (var file in files) File.Delete(file);
+            return files.Length;
+        }
+
         private static void DeleteIfExists(string folder)
         {
             if (Directory.Exists(folder)) Directory.Delete(folder, true);

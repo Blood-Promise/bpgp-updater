@@ -1,0 +1,29 @@
+<Window x:Class="BPGPUpdater.UninstallDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Uninstall BPGP" Width="500" SizeToContent="Height"
+        WindowStyle="None" ResizeMode="NoResize" WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        Background="{StaticResource FrameBrush}" FontFamily="{StaticResource BodyFont}" FontSize="13"
+        TextOptions.TextFormattingMode="Display" UseLayoutRounding="True">
+
+    <!-- A small dialog in the same frame as the main window -->
+    <Border BorderBrush="{StaticResource BronzeBrush}" BorderThickness="2">
+        <StackPanel>
+            <Border x:Name="TitleBar" Background="{StaticResource TitleBarBrush}" BorderBrush="{StaticResource BronzeDarkBrush}" BorderThickness="0,0,0,1" Padding="16,10">
+                <TextBlock Text="Uninstall BPGP" Style="{StaticResource Title}" />
+            </Border>
+            <StackPanel Margin="16,14,16,16">
+                <TextBlock Style="{StaticResource Heading}" Margin="0" Text="Remove BPGP from your AddOns folder?" />
+                <TextBlock Style="{StaticResource Muted}" Margin="0,8,0,0"
+                           Text="Remove BPGP keeps your BPGP settings and data, so installing it again brings everything back." />
+                <TextBlock x:Name="SettingsText" Style="{StaticResource Muted}" Margin="0,8,0,0" />
+                <TextBlock x:Name="WarningText" Style="{StaticResource Body}" Foreground="{StaticResource BadBrush}" Margin="0,8,0,0" Visibility="Collapsed" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+                    <Button x:Name="RemoveAllButton" Style="{StaticResource PrimaryButton}" MinWidth="0" Content="Remove BPGP and settings" />
+                    <Button x:Name="RemoveButton" Content="Remove BPGP" Margin="8,0,0,0" />
+                    <Button x:Name="CancelButton" Content="Cancel" Margin="8,0,0,0" IsCancel="True" IsDefault="True" />
+                </StackPanel>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>
