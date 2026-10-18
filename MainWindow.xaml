@@ -162,8 +162,9 @@
                                        Text="Installs and updates the BPGP addon from GitHub, so you don't need an addon manager. Your BPGP settings and data (WTF folder) are never touched." />
                             <StackPanel Margin="0,14,0,0">
                                 <TextBlock Margin="0,0,0,4"><Hyperlink x:Name="RepoLink">BPGP on GitHub</Hyperlink></TextBlock>
-                                <TextBlock Margin="0,0,0,4"><Hyperlink x:Name="ReleasesLink">All releases</Hyperlink></TextBlock>
-                                <TextBlock><Hyperlink x:Name="IssuesLink">Report a problem</Hyperlink></TextBlock>
+                                <TextBlock Margin="0,0,0,4"><Hyperlink x:Name="ReleasesLink">All BPGP releases</Hyperlink></TextBlock>
+                                <TextBlock Margin="0,0,0,4"><Hyperlink x:Name="UpdaterLink">BPGP Updater on GitHub</Hyperlink></TextBlock>
+                                <TextBlock><Hyperlink x:Name="IssuesLink">Report a problem with the updater</Hyperlink></TextBlock>
                             </StackPanel>
                             <TextBlock Style="{StaticResource Muted}" Margin="0,14,0,0" FontSize="12"
                                        Text="Apache License 2.0. BPGP is based on Core Loot Manager by Lantis and contributors. Title font: Marcellus (SIL Open Font License)." />

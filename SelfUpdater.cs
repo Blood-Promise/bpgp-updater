@@ -6,8 +6,8 @@ using System.Reflection;
 namespace BPGPUpdater
 {
     /// <summary>
-    /// Replaces this exe with the BPGPUpdater.exe of a newer updater release (tag updater-v*, released
-    /// separately from the addon). Windows lets a running exe be
+    /// Replaces this exe with the BPGPUpdater.exe of a newer release in the updater's own repository
+    /// (GitHubReleases.UpdaterRepository). Windows lets a running exe be
     /// renamed, so: download .new, rename the running exe to .old, move .new in place, restart.
     /// The .old file is removed on the next start.
     /// </summary>

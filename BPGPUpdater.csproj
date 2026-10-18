@@ -4,6 +4,7 @@
     BPGP Updater: installs and updates the BPGP addon from GitHub Releases.
     .NET Framework 4.8 ships with Windows 10/11, so the result is one small exe with nothing to install.
     The release workflow builds it with -p:Version=<tag> (see .github/workflows/release.yml).
+    Build locally: dotnet publish BPGPUpdater.csproj -c Release -o out
   -->
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -43,7 +44,7 @@
     <EmbeddedResource Include="app.ico" LogicalName="BPGPUpdater.app.ico" />
     <!-- Title font (SIL Open Font License, see Fonts/OFL.txt) and the addon's logo, inside the exe -->
     <Resource Include="Fonts\Marcellus-Regular.ttf" />
-    <Resource Include="..\BPGP\Media\Icons\bpgp-32.png" Link="Images\bpgp.png" />
+    <Resource Include="Images\bpgp.png" />
   </ItemGroup>
 
 </Project>

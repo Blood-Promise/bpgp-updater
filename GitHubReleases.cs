@@ -26,17 +26,9 @@ namespace BPGPUpdater
         [DataMember(Name = "prerelease")] public bool PreRelease { get; set; }
         [DataMember(Name = "assets")] public List<ReleaseAsset> Assets { get; set; }
 
-        /// <summary>Updater releases are tagged updater-v1.2.3, separate from the addon's v1.2.3</summary>
-        public const string UpdaterTagPrefix = "updater-";
-
-        public bool IsUpdater
-        {
-            get { return Tag != null && Tag.StartsWith(UpdaterTagPrefix, StringComparison.OrdinalIgnoreCase); }
-        }
-
         public SemVersion Version
         {
-            get { return SemVersion.Parse(IsUpdater ? Tag.Substring(UpdaterTagPrefix.Length) : Tag); }
+            get { return SemVersion.Parse(Tag); }
         }
 
         /// <summary>The addon zip the BigWigs packager uploads: BPGP-v1.2.3.zip</summary>
@@ -45,7 +37,7 @@ namespace BPGPUpdater
             get { return FindAsset(a => a.Name.StartsWith("BPGP-", StringComparison.OrdinalIgnoreCase) && a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)); }
         }
 
-        /// <summary>This app, attached to its own updater-v* release</summary>
+        /// <summary>This app, attached to a release of the updater's own repository</summary>
         public ReleaseAsset UpdaterExe
         {
             get { return FindAsset(a => string.Equals(a.Name, "BPGPUpdater.exe", StringComparison.OrdinalIgnoreCase)); }
@@ -65,14 +57,18 @@ namespace BPGPUpdater
     }
 
     /// <summary>
-    /// Reads releases of the public GitHub repository. No token needed: the anonymous limit
-    /// (60 requests per hour per IP) is far more than a check every few hours.
+    /// Reads releases of two public GitHub repositories: the addon's and this app's. No token needed:
+    /// the anonymous limit (60 requests per hour per IP) is far more than a check every few hours.
     /// </summary>
     internal static class GitHubReleases
     {
-        public const string Repository = "jurrebakker/bpgp";
-        public const string ReleasesPage = "https://github.com/" + Repository + "/releases";
-        private const string Api = "https://api.github.com/repos/" + Repository;
+        /// <summary>Where the addon is released (tags v*, each with a BPGP-v*.zip). Change this when the addon moves.</summary>
+        public const string AddonRepository = "jurrebakker/bpgp";
+        /// <summary>Where this app is released (tags v*, each with BPGPUpdater.exe)</summary>
+        public const string UpdaterRepository = "Blood-Promise/bpgp-updater";
+
+        public const string AddonReleasesPage = "https://github.com/" + AddonRepository + "/releases";
+        public const string UpdaterReleasesPage = "https://github.com/" + UpdaterRepository + "/releases";
 
         static GitHubReleases()
         {
@@ -81,23 +77,43 @@ namespace BPGPUpdater
         }
 
         /// <summary>
-        /// The newest addon release (tag v*) and updater release (tag updater-v*), from one request.
-        /// GitHub's own "latest release" can't be used: it doesn't know the two kinds apart.
+        /// The newest addon release (with a zip) and the newest updater release (with the exe).
+        /// The release list is used instead of GitHub's "latest release", so --prerelease can include betas.
         /// </summary>
         /// <param name="includePreReleases">Test switch (--prerelease): also consider alpha and beta releases</param>
         public static LatestReleases GetLatest(bool includePreReleases)
         {
+            return new LatestReleases
+            {
+                Addon = Newest(AddonRepository, includePreReleases, r => r.AddonZip != null),
+                Updater = TryNewest(UpdaterRepository, includePreReleases, r => r.UpdaterExe != null),
+            };
+        }
+
+        /// <summary>The self-update is optional: if its repository can't be read, addon updates still work</summary>
+        private static Release TryNewest(string repository, bool includePreReleases, Func<Release, bool> usable)
+        {
+            try
+            {
+                return Newest(repository, includePreReleases, usable);
+            }
+            catch (Exception e) when (e is WebException || e is IOException || e is SerializationException)
+            {
+                return null;
+            }
+        }
+
+        private static Release Newest(string repository, bool includePreReleases, Func<Release, bool> usable)
+        {
             List<Release> releases;
             using (var client = CreateClient(true))
             {
-                releases = Deserialize<List<Release>>(client.DownloadData(Api + "/releases?per_page=50"));
+                releases = Deserialize<List<Release>>(client.DownloadData("https://api.github.com/repos/" + repository + "/releases?per_page=50"));
             }
-            var usable = releases.Where(r => !r.Draft && (includePreReleases || !r.PreRelease) && r.Version != null).ToList();
-            return new LatestReleases
-            {
-                Addon = usable.Where(r => !r.IsUpdater && r.AddonZip != null).OrderByDescending(r => r.Version).FirstOrDefault(),
-                Updater = usable.Where(r => r.IsUpdater && r.UpdaterExe != null).OrderByDescending(r => r.Version).FirstOrDefault(),
-            };
+            return releases
+                .Where(r => !r.Draft && (includePreReleases || !r.PreRelease) && r.Version != null && usable(r))
+                .OrderByDescending(r => r.Version)
+                .FirstOrDefault();
         }
 
         /// <summary>

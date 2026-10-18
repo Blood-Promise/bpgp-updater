@@ -35,9 +35,10 @@ namespace BPGPUpdater
             UninstallButton.Click += async (s, e) => await Uninstall();
             BrowseButton.Click += (s, e) => Browse();
             AutostartBox.Click += (s, e) => app.SetAutostart(AutostartBox.IsChecked == true);
-            RepoLink.Click += (s, e) => Open("https://github.com/" + GitHubReleases.Repository);
-            ReleasesLink.Click += (s, e) => Open(GitHubReleases.ReleasesPage);
-            IssuesLink.Click += (s, e) => Open("https://github.com/" + GitHubReleases.Repository + "/issues");
+            RepoLink.Click += (s, e) => Open("https://github.com/" + GitHubReleases.AddonRepository);
+            ReleasesLink.Click += (s, e) => Open(GitHubReleases.AddonReleasesPage);
+            UpdaterLink.Click += (s, e) => Open("https://github.com/" + GitHubReleases.UpdaterRepository);
+            IssuesLink.Click += (s, e) => Open("https://github.com/" + GitHubReleases.UpdaterRepository + "/issues");
 
             app.Changed += OnChanged;
             Closed += (s, e) => { IsClosed = true; app.Changed -= OnChanged; };
