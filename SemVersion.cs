@@ -4,12 +4,13 @@ using System.Text.RegularExpressions;
 namespace BPGPUpdater
 {
     /// <summary>
-    /// A release version like v1.2.3 or v1.2.3-beta2, as used in our git tags.
+    /// A release version like v1.2.3 or v1.2.3-beta2, as used in our git tags. Short tags work too:
+    /// v0.1 is 0.1.0 and v1 is 1.0.0.
     /// A release ranks above its pre-releases; pre-releases compare by name, then by their number.
     /// </summary>
     internal sealed class SemVersion : IComparable<SemVersion>
     {
-        private static readonly Regex Pattern = new Regex(@"^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+.*)?$");
+        private static readonly Regex Pattern = new Regex(@"^v?(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:-([0-9A-Za-z.-]+))?(?:\+.*)?$");
         private static readonly Regex PreRelease = new Regex(@"^(.*?)(\d*)$");
 
         public int Major { get; private set; }
@@ -27,8 +28,8 @@ namespace BPGPUpdater
             return new SemVersion
             {
                 Major = int.Parse(match.Groups[1].Value),
-                Minor = int.Parse(match.Groups[2].Value),
-                Patch = int.Parse(match.Groups[3].Value),
+                Minor = match.Groups[2].Success ? int.Parse(match.Groups[2].Value) : 0,
+                Patch = match.Groups[3].Success ? int.Parse(match.Groups[3].Value) : 0,
                 Pre = match.Groups[4].Success ? match.Groups[4].Value : null,
             };
         }
