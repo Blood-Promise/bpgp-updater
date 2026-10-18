@@ -38,9 +38,11 @@ namespace BPGPUpdater
             get { var v = CurrentVersion; return v == null || (v.Major == 0 && v.Minor == 0 && v.Patch == 0); }
         }
 
+        /// <summary>A Store install never replaces itself: the Microsoft Store updates it</summary>
         public static bool HasUpdate(Release release)
         {
-            return release != null && release.UpdaterExe != null && !IsDevBuild && SemVersion.IsNewer(release.Version, CurrentVersion);
+            return release != null && release.UpdaterExe != null && !IsDevBuild && !Packaging.IsStoreInstall
+                && SemVersion.IsNewer(release.Version, CurrentVersion);
         }
 
         public static void CleanUp()

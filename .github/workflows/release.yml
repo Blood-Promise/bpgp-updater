@@ -3,6 +3,7 @@ name: Release
 # Pushing a tag like v1.0.0 builds BPGPUpdater.exe with that version and publishes it as a
 # GitHub Release. Installed updaters update themselves from the newest release here.
 # Tags with "alpha" or "beta" become a pre-release, which the self-update skips.
+# The release also gets BPGPUpdater-<version>.msix, the Microsoft Store package (Package/).
 
 on:
   push:
@@ -27,6 +28,12 @@ jobs:
           $version = '${{ github.ref_name }}'.TrimStart('v')
           dotnet publish BPGPUpdater.csproj -c Release -o out "-p:Version=$version"
 
+      - name: Build the Microsoft Store package
+        shell: pwsh
+        run: |
+          $version = '${{ github.ref_name }}'.TrimStart('v')
+          ./Package/build-msix.ps1 -Exe out -Version $version -Output "out/BPGPUpdater-$version.msix"
+
       - name: Create the release
         shell: pwsh
         env:
@@ -37,4 +44,4 @@ jobs:
           $notes = "BPGP Updater $version. Download BPGPUpdater.exe and run it: it installs and updates the BPGP addon. Already have it? It updates itself.`n`nWindows may say 'Windows protected your PC' because the exe isn't signed: click More info, then Run anyway."
           $flags = @()
           if ($version -match 'alpha|beta') { $flags += '--prerelease' }
-          gh release create $tag out/BPGPUpdater.exe --repo '${{ github.repository }}' --title "BPGP Updater $version" --notes $notes @flags
+          gh release create $tag out/BPGPUpdater.exe "out/BPGPUpdater-$version.msix" --repo '${{ github.repository }}' --title "BPGP Updater $version" --notes $notes @flags

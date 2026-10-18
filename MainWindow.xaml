@@ -140,7 +140,7 @@
                             <StackPanel>
                                 <TextBlock Text="In the background" Style="{StaticResource Heading}" />
                                 <CheckBox x:Name="AutostartBox" Content="Start with Windows" />
-                                <TextBlock Style="{StaticResource Muted}" Margin="26,6,0,0"
+                                <TextBlock x:Name="AutostartNote" Style="{StaticResource Muted}" Margin="26,6,0,0"
                                            Text="BPGP Updater waits next to the clock and checks for a new BPGP every 6 hours. Minimizing always sends it there; double-click the icon to open it again." />
                             </StackPanel>
                         </Border>

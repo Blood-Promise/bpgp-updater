@@ -32,8 +32,18 @@ Run it again to update, or tick **Start with Windows** under **Settings**. It th
   - `--test-zip <zip>`: a local addon zip acts as the latest release.
   - `--prerelease`: also use alpha and beta releases.
   - `--screenshot <path>`: saves every tab and the uninstall dialog as PNGs, then exits.
-- CI: `.github/workflows/build.yml` builds every pull request and push to `main` (the exe is kept as an artifact for 14 days).
-- **Releasing:** push a tag like `v1.0.0`. `.github/workflows/release.yml` builds the exe with that version and creates the release.
+- CI: `.github/workflows/build.yml` builds every pull request and push to `main`. The exe and a test MSIX are kept as artifacts for 14 days.
+- **Releasing:** push a tag like `v1.0.0`. `.github/workflows/release.yml` builds the exe and the Store package (`BPGPUpdater-<version>.msix`) with that version and creates the release.
+
+### Microsoft Store
+
+The app is also packaged for the Microsoft Store (identity `PatrickHopman.BPGPUpdater`, Store ID `9NXVNH273470`). The Store signs the package, so antivirus and SmartScreen trust it.
+
+- `Package/AppxManifest.xml` holds the package identity from Partner Center; `Package/build-msix.ps1` builds the MSIX with `makeappx` from the Windows SDK. Store versions have four numbers ending in 0: v1.0.1 becomes 1.0.1.0.
+- The Store install is detected with `Packaging.IsStoreInstall`:
+  - it never replaces itself, because the Store updates it;
+  - "Start with Windows" is hidden there, because Windows ignores the Run key for packaged apps.
+- **First submission:** upload the `.msix` from a release by hand in Partner Center. Updates through GitHub Actions only work once the app is live in the Store.
 
 ## License
 

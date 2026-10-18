@@ -26,7 +26,14 @@ namespace BPGPUpdater
             InitializeComponent();
             Icon = AppIcon.GetImage();
             TitleVersion.Text = "v" + SelfUpdater.CurrentVersionText;
-            AboutVersion.Text = "Version " + SelfUpdater.CurrentVersionText;
+            AboutVersion.Text = "Version " + SelfUpdater.CurrentVersionText + (Packaging.IsStoreInstall ? " (Microsoft Store)" : "");
+            if (!Autostart.IsAvailable)
+            {
+                // Store install: no Run key; the Store keeps the app itself up to date
+                AutostartBox.Visibility = Visibility.Collapsed;
+                AutostartNote.Margin = new Thickness(0);
+                AutostartNote.Text = "Installed from the Microsoft Store, which keeps BPGP Updater itself up to date. Open it from the Start menu; minimizing sends it next to the clock, and it checks for a new BPGP every 6 hours while it runs.";
+            }
 
             MinimizeButton.Click += (s, e) => WindowState = WindowState.Minimized;
             CloseButton.Click += (s, e) => Close();
