@@ -54,11 +54,13 @@ namespace BPGPUpdater
     {
         public Release Addon { get; set; }
         public Release Updater { get; set; }
+        /// <summary>Set when GitHub's limit was hit and the last saved answer was used</summary>
+        public DateTime? RateLimitedUntil { get; set; }
     }
 
     /// <summary>
     /// Reads releases of two public GitHub repositories: the addon's and this app's. No token needed:
-    /// the anonymous limit (60 requests per hour per IP) is far more than a check every few hours.
+    /// requests go through ApiCache, so unchanged lists don't count against the anonymous limit.
     /// </summary>
     internal static class GitHubReleases
     {
@@ -83,33 +85,32 @@ namespace BPGPUpdater
         /// <param name="includePreReleases">Test switch (--prerelease): also consider alpha and beta releases</param>
         public static LatestReleases GetLatest(bool includePreReleases)
         {
-            return new LatestReleases
+            var context = new FetchContext();
+            var latest = new LatestReleases
             {
-                Addon = Newest(AddonRepository, includePreReleases, r => r.AddonZip != null),
-                Updater = TryNewest(UpdaterRepository, includePreReleases, r => r.UpdaterExe != null),
+                Addon = Newest(AddonRepository, includePreReleases, r => r.AddonZip != null, context),
+                Updater = TryNewest(UpdaterRepository, includePreReleases, r => r.UpdaterExe != null, context),
             };
+            latest.RateLimitedUntil = context.RateLimitedUntil;
+            return latest;
         }
 
         /// <summary>The self-update is optional: if its repository can't be read, addon updates still work</summary>
-        private static Release TryNewest(string repository, bool includePreReleases, Func<Release, bool> usable)
+        private static Release TryNewest(string repository, bool includePreReleases, Func<Release, bool> usable, FetchContext context)
         {
             try
             {
-                return Newest(repository, includePreReleases, usable);
+                return Newest(repository, includePreReleases, usable, context);
             }
-            catch (Exception e) when (e is WebException || e is IOException || e is SerializationException)
+            catch (Exception e) when (e is WebException || e is IOException || e is SerializationException || e is RateLimitException)
             {
                 return null;
             }
         }
 
-        private static Release Newest(string repository, bool includePreReleases, Func<Release, bool> usable)
+        private static Release Newest(string repository, bool includePreReleases, Func<Release, bool> usable, FetchContext context)
         {
-            List<Release> releases;
-            using (var client = CreateClient(true))
-            {
-                releases = Deserialize<List<Release>>(client.DownloadData("https://api.github.com/repos/" + repository + "/releases?per_page=50"));
-            }
+            var releases = Deserialize<List<Release>>(ApiCache.Get("https://api.github.com/repos/" + repository + "/releases?per_page=50", context));
             return releases
                 .Where(r => !r.Draft && (includePreReleases || !r.PreRelease) && r.Version != null && usable(r))
                 .OrderByDescending(r => r.Version)
@@ -147,21 +148,15 @@ namespace BPGPUpdater
             };
         }
 
+        /// <summary>Downloads a release file. These are plain downloads, not API calls, so they don't count against the limit.</summary>
         public static void Download(string url, string path)
         {
-            using (var client = CreateClient(false))
+            using (var client = new TimeoutWebClient { Encoding = Encoding.UTF8 })
             {
+                // GitHub rejects requests without a User-Agent
+                client.Headers[HttpRequestHeader.UserAgent] = "BPGPUpdater/" + SelfUpdater.CurrentVersionText;
                 client.DownloadFile(url, path);
             }
-        }
-
-        private static TimeoutWebClient CreateClient(bool api)
-        {
-            var client = new TimeoutWebClient { Encoding = Encoding.UTF8 };
-            // GitHub rejects requests without a User-Agent
-            client.Headers[HttpRequestHeader.UserAgent] = "BPGPUpdater/" + SelfUpdater.CurrentVersionText;
-            if (api) client.Headers[HttpRequestHeader.Accept] = "application/vnd.github+json";
-            return client;
         }
 
         private static T Deserialize<T>(byte[] json)
