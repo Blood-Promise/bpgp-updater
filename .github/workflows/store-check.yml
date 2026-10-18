@@ -1,0 +1,30 @@
+name: Store check
+
+# Checks the Microsoft Store connection without publishing anything: signs in to Partner Center
+# with the four repository secrets and shows the status of BPGP Updater's submissions.
+# Run it by hand (Actions → Store check → Run workflow); it also runs on a pull request that changes it.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/store-check.yml'
+
+jobs:
+  check:
+    runs-on: windows-latest
+    steps:
+      - uses: microsoft/microsoft-store-apppublisher@v1.1
+
+      - name: Sign in to Partner Center
+        shell: pwsh
+        run: >
+          msstore reconfigure
+          --tenantId '${{ secrets.AZURE_AD_TENANT_ID }}'
+          --sellerId '${{ secrets.SELLER_ID }}'
+          --clientId '${{ secrets.AZURE_AD_APPLICATION_CLIENT_ID }}'
+          --clientSecret '${{ secrets.AZURE_AD_APPLICATION_SECRET }}'
+
+      - name: Status of BPGP Updater (9NXVNH273470)
+        shell: pwsh
+        run: msstore submission status 9NXVNH273470
