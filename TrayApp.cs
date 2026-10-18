@@ -169,6 +169,7 @@ namespace BPGPUpdater
             try
             {
                 Release updater = null;
+                DateTime? limitedUntil = null;
                 if (testZip != null)
                 {
                     Latest = await Task.Run(() => GitHubReleases.FromLocalZip(testZip));
@@ -178,6 +179,7 @@ namespace BPGPUpdater
                     var latest = await Task.Run(() => GitHubReleases.GetLatest(preReleases));
                     Latest = latest.Addon;
                     updater = latest.Updater;
+                    limitedUntil = latest.RateLimitedUntil;
                 }
                 RefreshInstalled();
                 if (SelfUpdater.HasUpdate(updater))
@@ -185,7 +187,10 @@ namespace BPGPUpdater
                     await UpdateSelfAsync(updater);
                     return;
                 }
-                SetStatus(CheckResult());
+                // GitHub's limit was hit: say so, but keep working with the last known release
+                SetStatus(CheckResult() + (limitedUntil != null
+                    ? " (GitHub's limit is reached: this is the last known release. New releases show up after " + limitedUntil.Value.ToString("HH:mm") + ".)"
+                    : ""));
                 if (notify && UpdateAvailable && settings.NotifiedVersion != Latest.Tag)
                 {
                     tray.Visible = true;
@@ -193,6 +198,10 @@ namespace BPGPUpdater
                     settings.NotifiedVersion = Latest.Tag;
                     settings.Save();
                 }
+            }
+            catch (RateLimitException e)
+            {
+                SetStatus(e.Message + " Try again after that.", true);
             }
             catch (Exception e) when (e is WebException || e is IOException || e is SerializationException)
             {
