@@ -44,6 +44,9 @@ The app is also packaged for the Microsoft Store (identity `PatrickHopman.BPGPUp
   - it never replaces itself, because the Store updates it;
   - "Start with Windows" is hidden there, because Windows ignores the Run key for packaged apps.
 - **First submission:** upload the `.msix` from a release by hand in Partner Center. Updates through GitHub Actions only work once the app is live in the Store.
+- **Updates:** every normal `v*` tag also submits the MSIX to the Store (`msstore publish` in `release.yml`); alpha/beta tags don't.
+  - It uses four repository secrets: `AZURE_AD_TENANT_ID`, `AZURE_AD_APPLICATION_CLIENT_ID`, `AZURE_AD_APPLICATION_SECRET` and `SELLER_ID`. They belong to the Entra app `bpgp-updater-github`, which has the Manager role in Partner Center.
+  - **Store check** (Actions → Store check → Run workflow) tests the connection without publishing.
 
 ## Privacy
 

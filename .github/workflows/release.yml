@@ -4,6 +4,8 @@ name: Release
 # GitHub Release. Installed updaters update themselves from the newest release here.
 # Tags with "alpha" or "beta" become a pre-release, which the self-update skips.
 # The release also gets BPGPUpdater-<version>.msix, the Microsoft Store package (Package/).
+# For normal (non-alpha/beta) tags that package is then submitted to the Microsoft Store
+# (product 9NXVNH273470) with the Partner Center secrets; Microsoft certifies it before it goes live.
 
 on:
   push:
@@ -45,3 +47,19 @@ jobs:
           $flags = @()
           if ($version -match 'alpha|beta') { $flags += '--prerelease' }
           gh release create $tag out/BPGPUpdater.exe "out/BPGPUpdater-$version.msix" --repo '${{ github.repository }}' --title "BPGP Updater $version" --notes $notes @flags
+
+      # Microsoft Store: only real releases, not alpha/beta
+      - uses: microsoft/microsoft-store-apppublisher@v1.1
+        if: ${{ !contains(github.ref_name, 'alpha') && !contains(github.ref_name, 'beta') }}
+
+      - name: Submit to the Microsoft Store
+        if: ${{ !contains(github.ref_name, 'alpha') && !contains(github.ref_name, 'beta') }}
+        shell: pwsh
+        run: |
+          msstore reconfigure `
+            --tenantId '${{ secrets.AZURE_AD_TENANT_ID }}' `
+            --sellerId '${{ secrets.SELLER_ID }}' `
+            --clientId '${{ secrets.AZURE_AD_APPLICATION_CLIENT_ID }}' `
+            --clientSecret '${{ secrets.AZURE_AD_APPLICATION_SECRET }}'
+          $version = '${{ github.ref_name }}'.TrimStart('v')
+          msstore publish "out/BPGPUpdater-$version.msix" -id 9NXVNH273470
