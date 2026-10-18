@@ -248,7 +248,11 @@
         </Setter>
     </Style>
 
-    <!-- Tabs along the bottom, like the addon's main window (PanelTabButtonTemplate) -->
+    <!--
+        Tabs along the bottom, like the addon's main window (PanelTabButtonTemplate). They hang below the
+        window frame: the strip row is outside the frame, and a tab overlaps the frame's bottom edge by 2 px.
+    -->
+    <GridLength x:Key="TabStripHeight">40</GridLength>
     <Style TargetType="TabControl">
         <Setter Property="TabStripPlacement" Value="Bottom" />
         <Setter Property="Background" Value="Transparent" />
@@ -260,10 +264,10 @@
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="*" />
-                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="{StaticResource TabStripHeight}" />
                         </Grid.RowDefinitions>
-                        <ContentPresenter Grid.Row="0" ContentSource="SelectedContent" />
-                        <TabPanel Grid.Row="1" IsItemsHost="True" Margin="14,-1,0,0" Panel.ZIndex="1" />
+                        <ContentPresenter Grid.Row="0" ContentSource="SelectedContent" Margin="0,0,0,2" />
+                        <TabPanel Grid.Row="1" IsItemsHost="True" Margin="14,0,0,0" VerticalAlignment="Top" Panel.ZIndex="1" />
                     </Grid>
                 </ControlTemplate>
             </Setter.Value>
@@ -284,7 +288,9 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsSelected" Value="True">
+                            <!-- The selected tab covers the frame's bottom edge, so it looks attached -->
                             <Setter TargetName="Tab" Property="Background" Value="{StaticResource FrameBrush}" />
+                            <Setter TargetName="Tab" Property="Margin" Value="0,-2,4,0" />
                             <Setter TargetName="Tab" Property="Padding" Value="20,9,20,10" />
                             <Setter TargetName="Tab" Property="TextElement.Foreground" Value="{StaticResource GoldBrush}" />
                         </Trigger>

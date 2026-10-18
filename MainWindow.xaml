@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="BPGP Updater" Width="640" Height="540" MinWidth="540" MinHeight="470"
         WindowStyle="None" ResizeMode="CanResize" WindowStartupLocation="CenterScreen"
-        Background="Black" FontFamily="{StaticResource BodyFont}" FontSize="13"
+        AllowsTransparency="True" Background="Transparent" FontFamily="{StaticResource BodyFont}" FontSize="13"
         TextOptions.TextFormattingMode="Display" UseLayoutRounding="True">
 
     <!-- Own frame like the addon's PortraitFrameTemplate: no Windows title bar -->
@@ -11,7 +11,17 @@
         <WindowChrome CaptionHeight="56" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False" />
     </WindowChrome.WindowChrome>
 
-    <Border x:Name="Root" BorderBrush="{StaticResource BronzeBrush}" BorderThickness="2" Background="{StaticResource FrameBrush}">
+    <!--
+        The window itself is transparent: the frame ends above the bottom row, and the tabs hang below
+        the frame like in the addon's main window. The tab strip row is as high as TabStripHeight in Theme.xaml.
+    -->
+    <Grid x:Name="Root">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="{StaticResource TabStripHeight}" />
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" BorderBrush="{StaticResource BronzeBrush}" BorderThickness="2" Background="{StaticResource FrameBrush}">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="56" />
@@ -49,7 +59,11 @@
                 </Grid>
             </Border>
 
-            <TabControl x:Name="Tabs" Grid.Row="1" Margin="0,12,0,0">
+        </Grid>
+        </Border>
+
+        <!-- Over the frame (below the title bar) and the tab strip row: content inside, tabs outside -->
+        <TabControl x:Name="Tabs" Grid.Row="0" Grid.RowSpan="2" Margin="2,70,2,0">
                 <!-- BPGP: installed and latest version, Install / Update, what's new -->
                 <TabItem Header="BPGP">
                     <Grid Margin="14,0,14,12">
@@ -154,6 +168,5 @@
                     </Border>
                 </TabItem>
             </TabControl>
-        </Grid>
-    </Border>
+    </Grid>
 </Window>
