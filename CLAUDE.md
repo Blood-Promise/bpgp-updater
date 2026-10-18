@@ -24,7 +24,8 @@ Windows app that installs and updates the BPGP addon (repo `jurrebakker/bpgp`, c
 
 - Repo: `Blood-Promise/bpgp-updater`, default branch `main`. Work on a branch and open a PR; commit or push only when the user asks.
 - Commit messages: a short title, a body listing what changed, and the Co-Authored-By line.
-- Release: push a tag `v<version>` (e.g. `v1.0.1`). `.github/workflows/release.yml` builds the exe and creates the release. Installed updaters pick it up as a self-update.
+- Release: push a tag `v<version>` (e.g. `v1.0.1`). `.github/workflows/release.yml` builds the exe and the Store MSIX (`Package/build-msix.ps1`) and creates the release. Installed exes pick it up as a self-update.
+- **Microsoft Store:** package identity `PatrickHopman.BPGPUpdater`, publisher `CN=B7FBC900-829F-4221-9B58-0222876AC75C`, Store ID `9NXVNH273470` (in `Package/AppxManifest.xml`; must match Partner Center). `Packaging.IsStoreInstall` turns off the self-update and hides Start with Windows in the Store version. The first submission is manual; automatic Store publishing (`microsoft/microsoft-store-apppublisher` + `msstore publish`) needs the app live plus the secrets `AZURE_AD_TENANT_ID`, `AZURE_AD_APPLICATION_CLIENT_ID`, `AZURE_AD_APPLICATION_SECRET` and `SELLER_ID`.
 
 ## Checking changes (this machine)
 

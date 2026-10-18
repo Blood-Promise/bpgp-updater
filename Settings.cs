@@ -67,10 +67,17 @@ namespace BPGPUpdater
             get { return "\"" + SelfUpdater.ExePath + "\" " + Program.TrayArgument; }
         }
 
+        /// <summary>Windows ignores the Run key for Store (MSIX) installs, so the option isn't offered there</summary>
+        public static bool IsAvailable
+        {
+            get { return !Packaging.IsStoreInstall; }
+        }
+
         public static bool IsEnabled
         {
             get
             {
+                if (!IsAvailable) return false;
                 using (var key = Registry.CurrentUser.OpenSubKey(RunKey))
                 {
                     return key != null && key.GetValue(ValueName) != null;
@@ -80,6 +87,7 @@ namespace BPGPUpdater
 
         public static void Set(bool enabled)
         {
+            if (!IsAvailable) return;
             using (var key = Registry.CurrentUser.CreateSubKey(RunKey))
             {
                 if (enabled) key.SetValue(ValueName, Command);

@@ -1,8 +1,8 @@
 name: Build
 
 # Builds BPGPUpdater.exe on every pull request and push to main, so a broken build shows up before
-# a release tag. The exe is kept as a downloadable artifact for 14 days, so a PR's version can be
-# tried without building it locally.
+# a release tag. The exe (and a test MSIX, to check the Store package builds) is kept as a
+# downloadable artifact for 14 days, so a PR's version can be tried without building it locally.
 
 on:
   pull_request:
@@ -23,8 +23,14 @@ jobs:
         shell: pwsh
         run: dotnet publish BPGPUpdater.csproj -c Release -o out
 
+      - name: Build the Microsoft Store package
+        shell: pwsh
+        run: ./Package/build-msix.ps1 -Exe out -Version 0.0.1 -Output out/BPGPUpdater-test.msix
+
       - uses: actions/upload-artifact@v4
         with:
           name: BPGPUpdater
-          path: out/BPGPUpdater.exe
+          path: |
+            out/BPGPUpdater.exe
+            out/BPGPUpdater-test.msix
           retention-days: 14
