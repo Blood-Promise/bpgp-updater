@@ -45,6 +45,10 @@ The app is also packaged for the Microsoft Store (identity `PatrickHopman.BPGPUp
   - "Start with Windows" is hidden there, because Windows ignores the Run key for packaged apps.
 - **First submission:** upload the `.msix` from a release by hand in Partner Center. Updates through GitHub Actions only work once the app is live in the Store.
 
+## Privacy
+
+BPGP Updater collects no personal data: no accounts, analytics or tracking. It only talks to GitHub (releases) and, if you set a raid schedule link, Google Sheets. See the [privacy policy](PRIVACY.md).
+
 ## License
 
 Apache License 2.0, see [LICENSE](LICENSE). Marcellus font: SIL Open Font License 1.1, see [Fonts/OFL.txt](Fonts/OFL.txt).
