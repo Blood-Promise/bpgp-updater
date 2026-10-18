@@ -1,0 +1,159 @@
+<Window x:Class="BPGPUpdater.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="BPGP Updater" Width="640" Height="540" MinWidth="540" MinHeight="470"
+        WindowStyle="None" ResizeMode="CanResize" WindowStartupLocation="CenterScreen"
+        Background="Black" FontFamily="{StaticResource BodyFont}" FontSize="13"
+        TextOptions.TextFormattingMode="Display" UseLayoutRounding="True">
+
+    <!-- Own frame like the addon's PortraitFrameTemplate: no Windows title bar -->
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="56" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False" />
+    </WindowChrome.WindowChrome>
+
+    <Border x:Name="Root" BorderBrush="{StaticResource BronzeBrush}" BorderThickness="2" Background="{StaticResource FrameBrush}">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="56" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- Title bar: portrait with the logo, title, minimize and close -->
+            <Border Grid.Row="0" Background="{StaticResource TitleBarBrush}" BorderBrush="{StaticResource BronzeDarkBrush}" BorderThickness="0,0,0,1">
+                <Grid Margin="10,0,10,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Grid Grid.Column="0" Width="44" Height="44" VerticalAlignment="Center">
+                        <Ellipse Fill="Black" Stroke="{StaticResource PaleGoldBrush}" StrokeThickness="2" />
+                        <Ellipse Margin="5">
+                            <Ellipse.Fill>
+                                <ImageBrush ImageSource="pack://application:,,,/BPGPUpdater;component/Images/bpgp.png" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality" />
+                            </Ellipse.Fill>
+                        </Ellipse>
+                    </Grid>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
+                        <TextBlock Text="BPGP Updater" Style="{StaticResource Title}" FontSize="20" />
+                        <TextBlock x:Name="TitleVersion" Style="{StaticResource Muted}" VerticalAlignment="Bottom" Margin="10,0,0,3" FontSize="12" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button x:Name="MinimizeButton" Style="{StaticResource CaptionButton}" WindowChrome.IsHitTestVisibleInChrome="True" ToolTip="Minimize to the tray">
+                            <Path Data="M 0,0 L 10,0" Stroke="{StaticResource PaleGoldBrush}" StrokeThickness="2" Margin="0,8,0,0" />
+                        </Button>
+                        <Button x:Name="CloseButton" Style="{StaticResource CloseButton}" WindowChrome.IsHitTestVisibleInChrome="True" Margin="6,0,0,0" ToolTip="Close">
+                            <Path Data="M 0,0 L 9,9 M 9,0 L 0,9" Stroke="{StaticResource GoldBrush}" StrokeThickness="2" />
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <TabControl x:Name="Tabs" Grid.Row="1" Margin="0,12,0,0">
+                <!-- BPGP: installed and latest version, Install / Update, what's new -->
+                <TabItem Header="BPGP">
+                    <Grid Margin="14,0,14,12">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="12" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Style="{StaticResource Inset}">
+                                <StackPanel>
+                                    <TextBlock Text="INSTALLED" Style="{StaticResource Caption}" />
+                                    <TextBlock x:Name="InstalledValue" Style="{StaticResource BigValue}" Text="–" />
+                                    <TextBlock x:Name="InstalledNote" Style="{StaticResource Muted}" FontSize="12" />
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="2" Style="{StaticResource Inset}">
+                                <StackPanel>
+                                    <TextBlock Text="LATEST" Style="{StaticResource Caption}" />
+                                    <TextBlock x:Name="LatestValue" Style="{StaticResource BigValue}" Foreground="{StaticResource GoldBrush}" Text="–" />
+                                    <TextBlock x:Name="LatestNote" Style="{StaticResource Muted}" FontSize="12" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                        <Grid Grid.Row="1" Margin="0,12,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Button x:Name="InstallButton" Grid.Column="0" Style="{StaticResource PrimaryButton}" Content="Install" IsDefault="True" />
+                            <Button x:Name="CheckButton" Grid.Column="1" Content="Check again" Margin="10,0,0,0" />
+                            <!-- Status line: what the updater is doing or found -->
+                            <TextBlock x:Name="StatusText" Grid.Column="2" Style="{StaticResource Muted}" Margin="14,0,0,0" VerticalAlignment="Center" FontSize="12" />
+                        </Grid>
+                        <Border Grid.Row="2" Style="{StaticResource Inset}">
+                            <DockPanel>
+                                <TextBlock x:Name="ChangelogHeading" DockPanel.Dock="Top" Style="{StaticResource Heading}" Text="What's new" />
+                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                    <TextBlock x:Name="ChangelogText" Style="{StaticResource Body}" Margin="0,0,6,0" />
+                                </ScrollViewer>
+                            </DockPanel>
+                        </Border>
+                    </Grid>
+                </TabItem>
+
+                <!-- Settings: WoW folder and Start with Windows -->
+                <TabItem Header="Settings">
+                    <StackPanel Margin="14,0,14,12">
+                        <Border Style="{StaticResource Inset}">
+                            <StackPanel>
+                                <TextBlock Text="World of Warcraft" Style="{StaticResource Heading}" />
+                                <TextBlock Style="{StaticResource Muted}" Margin="0,0,0,8"
+                                           Text="The World of Warcraft folder, with _retail_ in it. BPGP goes into _retail_\Interface\AddOns." />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="FolderBox" Grid.Column="0" IsReadOnly="True" />
+                                    <Button x:Name="BrowseButton" Grid.Column="1" Content="Browse…" Margin="8,0,0,0" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource Inset}" Margin="0,12,0,0">
+                            <StackPanel>
+                                <TextBlock Text="In the background" Style="{StaticResource Heading}" />
+                                <CheckBox x:Name="AutostartBox" Content="Start with Windows" />
+                                <TextBlock Style="{StaticResource Muted}" Margin="26,6,0,0"
+                                           Text="BPGP Updater waits next to the clock and checks for a new BPGP every 6 hours. Minimizing always sends it there; double-click the icon to open it again." />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </TabItem>
+
+                <!-- About -->
+                <TabItem Header="About">
+                    <Border Style="{StaticResource Inset}" Margin="14,0,14,12" VerticalAlignment="Top">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Image Source="pack://application:,,,/BPGPUpdater;component/Images/bpgp.png" Width="48" Height="48" RenderOptions.BitmapScalingMode="HighQuality" />
+                                <StackPanel Margin="14,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock Text="BPGP Updater" Style="{StaticResource Title}" FontSize="20" />
+                                    <TextBlock x:Name="AboutVersion" Style="{StaticResource Muted}" />
+                                </StackPanel>
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource Body}" Margin="0,14,0,0"
+                                       Text="Installs and updates the BPGP addon from GitHub, so you don't need an addon manager. Your BPGP settings and data (WTF folder) are never touched." />
+                            <StackPanel Margin="0,14,0,0">
+                                <TextBlock Margin="0,0,0,4"><Hyperlink x:Name="RepoLink">BPGP on GitHub</Hyperlink></TextBlock>
+                                <TextBlock Margin="0,0,0,4"><Hyperlink x:Name="ReleasesLink">All releases</Hyperlink></TextBlock>
+                                <TextBlock><Hyperlink x:Name="IssuesLink">Report a problem</Hyperlink></TextBlock>
+                            </StackPanel>
+                            <TextBlock Style="{StaticResource Muted}" Margin="0,14,0,0" FontSize="12"
+                                       Text="Apache License 2.0. BPGP is based on Core Loot Manager by Lantis and contributors. Title font: Marcellus (SIL Open Font License)." />
+                        </StackPanel>
+                    </Border>
+                </TabItem>
+            </TabControl>
+        </Grid>
+    </Border>
+</Window>

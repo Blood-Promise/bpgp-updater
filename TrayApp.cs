@@ -1,41 +1,47 @@
 using System;
 using System.Diagnostics;
-using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
-using System.Windows.Forms;
+using System.Windows;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Threading;
+using Drawing = System.Drawing;
+using Forms = System.Windows.Forms;
 
 namespace BPGPUpdater
 {
     /// <summary>
     /// The app itself: owns the state (WoW folder, installed and latest version), the tray icon and
     /// the 6-hour check. The window is only a view on it and can be closed and reopened.
+    /// Created from Application.Startup, so async work continues on the UI thread.
     /// </summary>
-    internal sealed class TrayApp : ApplicationContext
+    internal sealed class TrayApp
     {
         private static readonly TimeSpan CheckInterval = TimeSpan.FromHours(6);
 
         private readonly Settings settings = Settings.Load();
         private readonly bool preReleases;
         private readonly string testZip;
-        private readonly NotifyIcon tray;
-        private readonly Timer timer;
-        private MainForm form;
+        private readonly Forms.NotifyIcon tray;
+        private readonly DispatcherTimer timer;
+        private MainWindow window;
 
         public string RetailFolder { get; private set; }
         public InstalledAddon Installed { get; private set; }
         public Release Latest { get; private set; }
         public string Status { get; private set; }
+        public bool StatusIsError { get; private set; }
         public bool Busy { get; private set; }
 
         /// <summary>Raised when anything the window shows has changed</summary>
         public event Action Changed;
 
-        public TrayApp(bool startInTray, bool preReleases, string testZip)
+        public TrayApp(bool startInTray, bool preReleases, string testZip, string screenshot)
         {
             this.preReleases = preReleases;
             this.testZip = testZip;
@@ -50,12 +56,13 @@ namespace BPGPUpdater
             }
             RefreshInstalled();
 
-            var menu = new ContextMenuStrip();
+            // WPF has no tray icon of its own: use the Windows Forms one
+            var menu = new Forms.ContextMenuStrip();
             menu.Items.Add("Open BPGP Updater", null, (s, e) => ShowWindow());
             menu.Items.Add("Check for updates", null, async (s, e) => await CheckAsync(true));
-            menu.Items.Add(new ToolStripSeparator());
+            menu.Items.Add(new Forms.ToolStripSeparator());
             menu.Items.Add("Exit", null, (s, e) => Exit());
-            tray = new NotifyIcon
+            tray = new Forms.NotifyIcon
             {
                 Icon = AppIcon.Get(),
                 Text = "BPGP Updater",
@@ -65,12 +72,20 @@ namespace BPGPUpdater
             tray.DoubleClick += (s, e) => ShowWindow();
             tray.BalloonTipClicked += (s, e) => ShowWindow();
 
-            timer = new Timer { Interval = (int)CheckInterval.TotalMilliseconds };
+            timer = new DispatcherTimer { Interval = CheckInterval };
             timer.Tick += async (s, e) => await CheckAsync(true);
             timer.Start();
 
             if (!startInTray) ShowWindow();
-            var check = CheckAsync(startInTray);
+            var check = CheckAndContinue(startInTray, screenshot);
+        }
+
+        private async Task CheckAndContinue(bool notify, string screenshot)
+        {
+            await CheckAsync(notify);
+            if (screenshot == null) return;
+            window.SaveScreenshots(screenshot);
+            Exit();
         }
 
         public bool UpdateAvailable
@@ -87,12 +102,17 @@ namespace BPGPUpdater
             }
         }
 
+        private bool WindowShown
+        {
+            get { return window != null && !window.IsClosed && window.IsVisible; }
+        }
+
         public void ShowWindow()
         {
-            if (form == null || form.IsDisposed) form = new MainForm(this);
-            form.Show();
-            if (form.WindowState == FormWindowState.Minimized) form.WindowState = FormWindowState.Normal;
-            form.Activate();
+            if (window == null || window.IsClosed) window = new MainWindow(this);
+            window.Show();
+            if (window.WindowState == WindowState.Minimized) window.WindowState = WindowState.Normal;
+            window.Activate();
             // The tray icon only stays while the window is open when "Start with Windows" is on
             tray.Visible = Autostart.IsEnabled;
         }
@@ -103,7 +123,7 @@ namespace BPGPUpdater
             tray.Visible = true;
             if (!settings.ShownTrayHint)
             {
-                tray.ShowBalloonTip(5000, "BPGP Updater", "BPGP Updater is still running here. Double-click the icon to open it.", ToolTipIcon.Info);
+                tray.ShowBalloonTip(5000, "BPGP Updater", "BPGP Updater is still running here. Double-click the icon to open it.", Forms.ToolTipIcon.Info);
                 settings.ShownTrayHint = true;
                 settings.Save();
             }
@@ -118,7 +138,7 @@ namespace BPGPUpdater
             }
             else
             {
-                form = null; // it's closing itself
+                window = null; // it's closing itself
                 Exit();
             }
         }
@@ -126,7 +146,7 @@ namespace BPGPUpdater
         public void SetAutostart(bool enabled)
         {
             Autostart.Set(enabled);
-            tray.Visible = enabled || form == null || !form.Visible;
+            tray.Visible = enabled || !WindowShown;
             Changed?.Invoke();
         }
 
@@ -137,7 +157,7 @@ namespace BPGPUpdater
             RetailFolder = settings.RetailFolder = retail;
             settings.Save();
             RefreshInstalled();
-            SetStatus(UpdateAvailable ? "Ready to install." : Status);
+            SetStatus(Latest != null ? CheckResult() : Status);
             return true;
         }
 
@@ -169,18 +189,18 @@ namespace BPGPUpdater
                 if (notify && UpdateAvailable && settings.NotifiedVersion != Latest.Tag)
                 {
                     tray.Visible = true;
-                    tray.ShowBalloonTip(10000, "BPGP update", "BPGP " + Latest.Tag + " is available. Click here to update.", ToolTipIcon.Info);
+                    tray.ShowBalloonTip(10000, "BPGP update", "BPGP " + Latest.Tag + " is available. Click here to update.", Forms.ToolTipIcon.Info);
                     settings.NotifiedVersion = Latest.Tag;
                     settings.Save();
                 }
             }
             catch (Exception e) when (e is WebException || e is IOException || e is SerializationException)
             {
-                SetStatus(testZip != null ? "Couldn't read the test zip: " + e.Message : "Couldn't reach GitHub: " + e.Message);
+                SetStatus(testZip != null ? "Couldn't read the test zip: " + e.Message : "Couldn't reach GitHub: " + e.Message, true);
             }
             catch (Exception e) when (testZip != null && (e is InvalidDataException || e is UnauthorizedAccessException || e is ArgumentException || e is NotSupportedException))
             {
-                SetStatus("Couldn't read the test zip: " + e.Message);
+                SetStatus("Couldn't read the test zip: " + e.Message, true);
             }
             finally
             {
@@ -192,7 +212,7 @@ namespace BPGPUpdater
         private string CheckResult()
         {
             if (Latest == null) return "No BPGP release published yet.";
-            if (RetailFolder == null) return "World of Warcraft wasn't found. Click Browse to pick its folder.";
+            if (RetailFolder == null) return "World of Warcraft wasn't found. Pick its folder under Settings.";
             if (Installed.State == AddonState.Linked) return "AddOns\\BPGP is linked to a git clone (developer setup). The updater leaves it alone.";
             return UpdateAvailable ? "BPGP " + Latest.Tag + " is available." : "BPGP is up to date.";
         }
@@ -202,14 +222,14 @@ namespace BPGPUpdater
             SetStatus("Updating BPGP Updater to " + release.Version + "…");
             try
             {
-                bool inTray = form == null || !form.Visible;
+                bool inTray = !WindowShown;
                 await Task.Run(() => SelfUpdater.Apply(release, inTray));
                 Exit();
             }
             catch (Exception e) when (e is WebException || e is IOException || e is UnauthorizedAccessException)
             {
                 // Not fatal: the addon update still works with this version
-                SetStatus("Couldn't update BPGP Updater itself (" + e.Message + "). Download the new one from the releases page.");
+                SetStatus("Couldn't update BPGP Updater itself (" + e.Message + "). Download the new one from the releases page.", true);
             }
         }
 
@@ -233,11 +253,11 @@ namespace BPGPUpdater
             }
             catch (UnauthorizedAccessException)
             {
-                SetStatus("No permission to write to the AddOns folder. Close WoW, or run BPGP Updater as administrator.");
+                SetStatus("No permission to write to the AddOns folder. Close WoW, or run BPGP Updater as administrator.", true);
             }
             catch (Exception e) when (e is WebException || e is IOException || e is InvalidDataException || e is InvalidOperationException)
             {
-                SetStatus("Install failed: " + e.Message);
+                SetStatus("Install failed: " + e.Message, true);
             }
             finally
             {
@@ -245,12 +265,6 @@ namespace BPGPUpdater
                 Busy = false;
                 Changed?.Invoke();
             }
-        }
-
-        public void OpenReleasesPage()
-        {
-            var url = Latest != null && !string.IsNullOrEmpty(Latest.PageUrl) ? Latest.PageUrl : GitHubReleases.ReleasesPage;
-            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
         }
 
         private void RefreshInstalled()
@@ -265,9 +279,10 @@ namespace BPGPUpdater
             return new[] { "Wow", "WowT", "WowB" }.Any(name => Process.GetProcessesByName(name).Length > 0);
         }
 
-        private void SetStatus(string text)
+        private void SetStatus(string text, bool isError = false)
         {
             Status = text;
+            StatusIsError = isError;
             Changed?.Invoke();
         }
 
@@ -276,17 +291,34 @@ namespace BPGPUpdater
             timer.Stop();
             tray.Visible = false;
             tray.Dispose();
-            if (form != null && !form.IsDisposed) form.CloseForExit();
-            ExitThread();
+            if (window != null && !window.IsClosed) window.CloseForExit();
+            Application.Current.Shutdown();
         }
     }
 
     internal static class AppIcon
     {
-        public static Icon Get()
+        private static Stream Open()
         {
-            var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("BPGPUpdater.app.ico");
-            return stream != null ? new Icon(stream) : SystemIcons.Application;
+            return Assembly.GetExecutingAssembly().GetManifestResourceStream("BPGPUpdater.app.ico");
+        }
+
+        /// <summary>For the tray icon (Windows Forms)</summary>
+        public static Drawing.Icon Get()
+        {
+            var stream = Open();
+            return stream != null ? new Drawing.Icon(stream) : Drawing.SystemIcons.Application;
+        }
+
+        /// <summary>For the window and taskbar (WPF): the largest frame of the icon</summary>
+        public static ImageSource GetImage()
+        {
+            using (var stream = Open())
+            {
+                if (stream == null) return null;
+                var decoder = new IconBitmapDecoder(stream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
+                return decoder.Frames.OrderByDescending(f => f.PixelWidth).First();
+            }
         }
     }
 }
