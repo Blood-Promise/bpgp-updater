@@ -22,6 +22,18 @@ namespace BPGPUpdater
         /// <summary>The "still running in the tray" hint was shown once after minimizing</summary>
         [DataMember(Name = "shownTrayHint")] public bool ShownTrayHint { get; set; }
 
+        /// <summary>Also install alpha and beta releases of BPGP (for officers)</summary>
+        [DataMember(Name = "betaChannel")] public bool BetaChannel { get; set; }
+
+        /// <summary>The Google Sheets link to the raid schedule, as pasted</summary>
+        [DataMember(Name = "raidScheduleUrl")] public string RaidScheduleUrl { get; set; }
+
+        /// <summary>The name picked from the raid schedule's players</summary>
+        [DataMember(Name = "characterName")] public string CharacterName { get; set; }
+
+        /// <summary>The start of the last raid the tray reminded of (yyyy-MM-dd HH:mm), so it reminds once</summary>
+        [DataMember(Name = "notifiedRaid")] public string NotifiedRaid { get; set; }
+
         public static Settings Load()
         {
             try

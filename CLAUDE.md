@@ -5,10 +5,15 @@ Windows app that installs and updates the BPGP addon (repo `jurrebakker/bpgp`, c
 ## Layout
 
 - `Program.cs`: entry point, single-instance mutex, command-line switches.
-- `TrayApp.cs`: all state and logic (WoW folder, installed and latest version, check, install, uninstall, self-update, tray icon, 6-hour timer).
-- `MainWindow.xaml(.cs)`: the window, a view on TrayApp, with tabs BPGP, Settings and About. Add new tabs here.
+- `TrayApp.cs`: all state and logic (WoW folder, installed and latest version, changelog, check, install, uninstall, self-update, beta channel, raid schedule and reminder, settings backups and restore, tray icon, 6-hour and 1-minute timers).
+- `MainWindow.xaml(.cs)`: the window, a view on TrayApp, with tabs BPGP, Raids, Settings and About. Add new tabs here.
 - `UninstallDialog.xaml(.cs)`: Remove BPGP / Remove BPGP and settings / Cancel.
 - `Theme.xaml`: the addon's look (bronze frames, gold Marcellus titles, red buttons, tabs hanging below the frame).
+- `ApiCache.cs`: GitHub API and raid schedule reads with an ETag cache in `%APPDATA%\BPGPUpdater\cache`.
+- `RaidSchedule.cs`: the raid schedule sheet (Google Sheets CSV export): link → CSV URL, CSV parser, grid parser (dates without a year, player columns with 1/0, names from the header row). Raids start at 20:00.
+- `Markdown.cs` (parser, testable) and `MarkdownView.cs` (WPF): release notes with headings, bullets, bold, code and http(s) links.
+- `SettingsBackup.cs`: backups of BPGP.lua in `%APPDATA%\BPGPUpdater\backups` (last 5), and restore (writes only BPGP.lua/.lua.bak under WTF\Account\...\SavedVariables).
+- `Tests/`: MSTest project. It compiles the logic files in directly (the app is a WPF exe); add a file there when its logic gets tests. The app's csproj excludes `Tests\**`.
 - `GitHubReleases.cs`: release lookup. `AddonRepository` is the addon's repo (change it when the addon moves), `UpdaterRepository` is this repo.
 - `AddonInstaller.cs`: inspect, install (extract next to AddOns, swap, roll back), uninstall, and find/delete the settings (`WTF\Account\...\SavedVariables\BPGP.lua` and `.lua.bak` only).
 - `WowLocator.cs`, `SelfUpdater.cs`, `Settings.cs` (`%APPDATA%\BPGPUpdater\settings.json` and the Start with Windows Run key), `SemVersion.cs`.
@@ -17,7 +22,8 @@ Windows app that installs and updates the BPGP addon (repo `jurrebakker/bpgp`, c
 
 - C# 7.3 on .NET Framework 4.8; no NuGet runtime dependencies, so it stays a single exe. Warnings are errors.
 - Never touch a junction/symlinked `AddOns\BPGP`, and never recursively delete through a link.
-- Removing settings is refused while WoW runs (WoW writes them back).
+- Removing or restoring settings is refused while WoW runs (WoW writes them back).
+- The raid schedule only fetches `docs.google.com/spreadsheets` links (`RaidSchedule.ToCsvUrl`); release notes only link to http(s).
 - UI text is English, like the addon.
 
 ## Git and releases
@@ -30,6 +36,7 @@ Windows app that installs and updates the BPGP addon (repo `jurrebakker/bpgp`, c
 ## Checking changes (this machine)
 
 - Build: `dotnet publish BPGPUpdater.csproj -c Release -o out` (.NET 8 SDK installed). Stop a running BPGPUpdater first if you build into `out`, or publish to a temp folder.
+- Tests: `dotnet test Tests/BPGPUpdater.Tests.csproj` (CI runs them too).
 - Look: `out\BPGPUpdater.exe --screenshot <path>` and view the PNGs.
 - Install/update without a release: `--test-zip <zip>`, where the zip has `BPGP/BPGP.toc` with `## Version: v…`.
 - PowerShell 5.1: pass commit messages and PR bodies through a file (`-F`, `--body-file`). Quotes in arguments get mangled.

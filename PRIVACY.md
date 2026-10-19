@@ -1,6 +1,6 @@
 # BPGP Updater privacy policy
 
-*Last updated: 18 October 2026*
+*Last updated: 19 October 2026*
 
 BPGP Updater is a free, open-source Windows app made by Patrick Hopman for the Blood Promise guild. It installs and updates the BPGP World of Warcraft addon and can show the guild's raid schedule. This policy explains what the app does with data. In short: **BPGP Updater doesn't collect, store or share any personal data about you.** It has no accounts, analytics, tracking or ads.
 
@@ -11,7 +11,7 @@ The app only connects to these services, and only to do its job:
 | Service | When | What it asks for |
 |---|---|---|
 | **GitHub** (`api.github.com`, `github.com`) | When it checks for updates: at start, every 6 hours while running, and when you click *Check again* | The list of BPGP and BPGP Updater releases, and the release files it installs |
-| **Google Sheets** (`docs.google.com`) | Only if you paste a raid schedule link under *Settings* | That one spreadsheet, read-only, as a CSV file |
+| **Google Sheets** (`docs.google.com`) | Only if you paste a raid schedule link under *Settings*: at start, every 30 minutes while running, when you open the window and when you click *Refresh* | That one spreadsheet, read-only, as a CSV file |
 
 Like any internet request, these services see your IP address and a technical identifier, `BPGPUpdater/<version>`. The app sends nothing else: no name, no account, no device ID, no usage data. What GitHub and Google do with requests is covered by their own policies:
 - [GitHub General Privacy Statement](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement)
@@ -24,8 +24,10 @@ Everything stays on your PC. Nothing is sent to us.
 - **Settings** in `%APPDATA%\BPGPUpdater\settings.json`:
   - your World of Warcraft folder;
   - the raid schedule link and the name you picked, if you set them;
-  - which update you were last told about.
+  - whether you get beta versions of BPGP;
+  - which update and which raid you were last told about.
 - **A cache** in `%APPDATA%\BPGPUpdater\cache`, the last answers from GitHub and the raid schedule, so the app works with fewer requests and when you're offline.
+- **Backups of your BPGP settings** in `%APPDATA%\BPGPUpdater\backups`: copies of `BPGP.lua` and `BPGP.lua.bak` from the `WTF` folder, made before every install, update, uninstall and restore. The last 5 are kept.
 - **"Start with Windows"**, only if you turn it on: one entry in your Windows startup list (`HKEY_CURRENT_USER\...\Run`). The Microsoft Store version doesn't offer this option.
 - **The BPGP addon** in your World of Warcraft `Interface\AddOns\BPGP` folder.
 
