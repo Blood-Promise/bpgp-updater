@@ -1,15 +1,25 @@
 name: Release
 
-# Pushing a tag like v1.0.0 builds BPGPUpdater.exe with that version and publishes it as a
-# GitHub Release. Installed updaters update themselves from the newest release here.
-# Tags with "alpha" or "beta" become a pre-release, which the self-update skips.
+# Releases BPGP Updater: builds BPGPUpdater.exe with the version and publishes it as a GitHub Release.
+# Installed updaters update themselves from the newest release here.
+# Two ways to start it:
+#   - Actions → Release → Run workflow, with a version like 1.1.0: makes the tag v1.1.0 on the
+#     chosen branch's latest commit (usually main) along with the release;
+#   - pushing a tag like v1.1.0.
+# Versions with "alpha" or "beta" become a pre-release, which the self-update skips.
 # The release also gets BPGPUpdater-<version>.msix, the Microsoft Store package (Package/).
-# For normal (non-alpha/beta) tags that package is then submitted to the Microsoft Store
+# For normal (non-alpha/beta) versions that package is then submitted to the Microsoft Store
 # (product 9NXVNH273470) with the Partner Center secrets; Microsoft certifies it before it goes live.
 
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release, like 1.1.0 or 1.2.0-beta1 (becomes tag v1.1.0)'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -24,36 +34,55 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      # The tag: the pushed one, or v + the version typed in "Run workflow" (passed through env, never pasted into the script)
+      - name: Version
+        id: version
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if ('${{ github.event_name }}' -eq 'workflow_dispatch') {
+            $tag = 'v' + $env:INPUT_VERSION.Trim().TrimStart('v')
+            if (git ls-remote --tags origin "refs/tags/$tag") { throw "Tag $tag already exists. Pick a new version." }
+          } else {
+            $tag = '${{ github.ref_name }}'
+          }
+          if ($tag -notmatch '^v\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$') { throw "'$tag' isn't a version like v1.1.0 or v1.2.0-beta1." }
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "version=$($tag.Substring(1))" >> $env:GITHUB_OUTPUT
+          "store=$(if ($tag -match 'alpha|beta') { 'false' } else { 'true' })" >> $env:GITHUB_OUTPUT
+          Write-Host "Releasing $tag from $env:GITHUB_SHA"
+
       - name: Build BPGPUpdater.exe
         shell: pwsh
-        run: |
-          $version = '${{ github.ref_name }}'.TrimStart('v')
-          dotnet publish BPGPUpdater.csproj -c Release -o out "-p:Version=$version"
+        run: dotnet publish BPGPUpdater.csproj -c Release -o out "-p:Version=${{ steps.version.outputs.version }}"
 
       - name: Build the Microsoft Store package
         shell: pwsh
         run: |
-          $version = '${{ github.ref_name }}'.TrimStart('v')
+          $version = '${{ steps.version.outputs.version }}'
           ./Package/build-msix.ps1 -Exe out -Version $version -Output "out/BPGPUpdater-$version.msix"
 
+      # Also makes the tag when it doesn't exist yet (Run workflow), on the commit that was built
       - name: Create the release
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $tag = '${{ github.ref_name }}'
-          $version = $tag.TrimStart('v')
+          $tag = '${{ steps.version.outputs.tag }}'
+          $version = '${{ steps.version.outputs.version }}'
           $notes = "BPGP Updater $version. Download BPGPUpdater.exe and run it: it installs and updates the BPGP addon. Already have it? It updates itself.`n`nWindows may say 'Windows protected your PC' because the exe isn't signed: click More info, then Run anyway."
           $flags = @()
           if ($version -match 'alpha|beta') { $flags += '--prerelease' }
-          gh release create $tag out/BPGPUpdater.exe "out/BPGPUpdater-$version.msix" --repo '${{ github.repository }}' --title "BPGP Updater $version" --notes $notes @flags
+          gh release create $tag out/BPGPUpdater.exe "out/BPGPUpdater-$version.msix" --repo '${{ github.repository }}' --target $env:GITHUB_SHA --title "BPGP Updater $version" --notes $notes @flags
 
       # Microsoft Store: only real releases, not alpha/beta
       - uses: microsoft/microsoft-store-apppublisher@v1.1
-        if: ${{ !contains(github.ref_name, 'alpha') && !contains(github.ref_name, 'beta') }}
+        if: ${{ steps.version.outputs.store == 'true' }}
 
       - name: Submit to the Microsoft Store
-        if: ${{ !contains(github.ref_name, 'alpha') && !contains(github.ref_name, 'beta') }}
+        if: ${{ steps.version.outputs.store == 'true' }}
         shell: pwsh
         run: |
           msstore reconfigure `
@@ -61,5 +90,4 @@ jobs:
             --sellerId '${{ secrets.SELLER_ID }}' `
             --clientId '${{ secrets.AZURE_AD_APPLICATION_CLIENT_ID }}' `
             --clientSecret '${{ secrets.AZURE_AD_APPLICATION_SECRET }}'
-          $version = '${{ github.ref_name }}'.TrimStart('v')
-          msstore publish "out/BPGPUpdater-$version.msix" -id 9NXVNH273470
+          msstore publish "out/BPGPUpdater-${{ steps.version.outputs.version }}.msix" -id 9NXVNH273470
