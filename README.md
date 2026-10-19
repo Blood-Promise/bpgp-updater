@@ -48,7 +48,7 @@ Run it again to update, or tick **Start with Windows** under **Settings**. It th
   - `--prerelease`: also use alpha and beta releases.
   - `--screenshot <path>`: saves every tab and the uninstall dialog as PNGs, then exits.
 - CI: `.github/workflows/build.yml` runs the tests and builds every pull request and push to `main`. The exe and a test MSIX are kept as artifacts for 14 days.
-- **Releasing:** push a tag like `v1.0.0`. `.github/workflows/release.yml` builds the exe and the Store package (`BPGPUpdater-<version>.msix`) with that version and creates the release.
+- **Releasing:** **Actions → Release → Run workflow**, pick `main` and type the version (like `1.1.0`). `.github/workflows/release.yml` builds the exe and the Store package (`BPGPUpdater-<version>.msix`) with that version, and creates the tag `v<version>` and the release. Pushing a tag like `v1.1.0` does the same.
 
 ### Microsoft Store
 
@@ -59,7 +59,7 @@ The app is also packaged for the Microsoft Store (identity `PatrickHopman.BPGPUp
   - it never replaces itself, because the Store updates it;
   - "Start with Windows" is hidden there, because Windows ignores the Run key for packaged apps.
 - **First submission:** upload the `.msix` from a release by hand in Partner Center. Updates through GitHub Actions only work once the app is live in the Store.
-- **Updates:** every normal `v*` tag also submits the MSIX to the Store (`msstore publish` in `release.yml`); alpha/beta tags don't.
+- **Updates:** every normal release also submits the MSIX to the Store (`msstore publish` in `release.yml`); alpha/beta versions don't.
   - It uses four repository secrets: `AZURE_AD_TENANT_ID`, `AZURE_AD_APPLICATION_CLIENT_ID`, `AZURE_AD_APPLICATION_SECRET` and `SELLER_ID`. They belong to the Entra app `bpgp-updater-github`, which has the Manager role in Partner Center.
   - **Store check** (Actions → Store check → Run workflow) tests the connection without publishing.
 
