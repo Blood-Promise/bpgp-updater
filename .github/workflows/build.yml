@@ -1,7 +1,7 @@
 name: Build
 
-# Builds BPGPUpdater.exe on every pull request and push to main, so a broken build shows up before
-# a release tag. The exe (and a test MSIX, to check the Store package builds) is kept as a
+# Builds BPGPUpdater.exe and runs the tests on every pull request and push to main, so a broken build
+# shows up before a release tag. The exe (and a test MSIX, to check the Store package builds) is kept as a
 # downloadable artifact for 14 days, so a PR's version can be tried without building it locally.
 
 on:
@@ -18,6 +18,10 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+
+      - name: Run the tests
+        shell: pwsh
+        run: dotnet test Tests/BPGPUpdater.Tests.csproj -c Release
 
       - name: Build BPGPUpdater.exe
         shell: pwsh

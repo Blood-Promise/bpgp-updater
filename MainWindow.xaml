@@ -118,9 +118,69 @@
                     </Grid>
                 </TabItem>
 
-                <!-- Settings: WoW folder and Start with Windows -->
-                <TabItem Header="Settings">
-                    <StackPanel Margin="14,0,14,12">
+                <!-- Raids: the guild's raid schedule from Google Sheets -->
+                <TabItem Header="Raids">
+                    <Grid Margin="14,0,14,12">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Border x:Name="NextRaidPanel" Grid.Row="0" Style="{StaticResource Inset}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="NEXT RAID" Style="{StaticResource Caption}" />
+                                    <TextBlock x:Name="NextRaidValue" Style="{StaticResource BigValue}" Text="–" />
+                                    <TextBlock x:Name="NextRaidNote" Style="{StaticResource Muted}" FontSize="12" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                                    <TextBlock Text="COMING" Style="{StaticResource Caption}" HorizontalAlignment="Right" />
+                                    <TextBlock x:Name="NextRaidCount" Style="{StaticResource BigValue}" Foreground="{StaticResource GoldBrush}" HorizontalAlignment="Right" Text="–" />
+                                    <TextBlock x:Name="NextRaidMe" Style="{StaticResource Muted}" FontSize="12" HorizontalAlignment="Right" />
+                                </StackPanel>
+                                <TextBlock x:Name="NextRaidAbsent" Grid.Row="1" Grid.ColumnSpan="2" Style="{StaticResource Muted}" FontSize="12" Margin="0,8,0,0" />
+                            </Grid>
+                        </Border>
+                        <Border x:Name="RaidListPanel" Grid.Row="1" Style="{StaticResource Inset}" Margin="0,12,0,0">
+                            <DockPanel>
+                                <Grid DockPanel.Dock="Top">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Upcoming raids" Style="{StaticResource Heading}" />
+                                    <Button x:Name="RefreshScheduleButton" Grid.Column="1" Content="Refresh" MinWidth="0" Padding="12,3" VerticalAlignment="Top" />
+                                </Grid>
+                                <!-- Status line: when the sheet was read, or what went wrong -->
+                                <TextBlock x:Name="RaidsStatusText" DockPanel.Dock="Bottom" Style="{StaticResource Muted}" FontSize="12" Margin="0,8,0,0" />
+                                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,4,0,0">
+                                    <StackPanel x:Name="RaidList" Margin="0,0,6,0" />
+                                </ScrollViewer>
+                            </DockPanel>
+                        </Border>
+                        <!-- Instead of the above when no link is set -->
+                        <Border x:Name="NoSchedulePanel" Grid.Row="0" Grid.RowSpan="2" Style="{StaticResource Inset}" VerticalAlignment="Top" Visibility="Collapsed">
+                            <StackPanel>
+                                <TextBlock Text="Raid schedule" Style="{StaticResource Heading}" />
+                                <TextBlock Style="{StaticResource Body}"
+                                           Text="See the guild's raid nights and who's coming, and get a reminder two hours before a raid. Paste the link to the raid schedule sheet under Settings." />
+                                <Button x:Name="ScheduleSettingsButton" Content="Open Settings" HorizontalAlignment="Left" Margin="0,12,0,0" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </TabItem>
+
+                <!-- Settings: WoW folder, raid schedule, Start with Windows, beta versions, backups -->
+                <TabItem x:Name="SettingsTab" Header="Settings">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="14,0,4,12">
+                    <StackPanel Margin="0,0,10,0">
                         <Border Style="{StaticResource Inset}">
                             <StackPanel>
                                 <TextBlock Text="World of Warcraft" Style="{StaticResource Heading}" />
@@ -138,13 +198,65 @@
                         </Border>
                         <Border Style="{StaticResource Inset}" Margin="0,12,0,0">
                             <StackPanel>
+                                <TextBlock Text="Raid schedule" Style="{StaticResource Heading}" />
+                                <TextBlock Style="{StaticResource Muted}" Margin="0,0,0,8"
+                                           Text="The link to the guild's raid schedule in Google Sheets: copy it from the address bar. The sheet has to be shared as &quot;Anyone with the link can view&quot;." />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="ScheduleLinkBox" Grid.Column="0" />
+                                    <Button x:Name="SaveLinkButton" Grid.Column="1" Content="Save" Margin="8,0,0,0" />
+                                </Grid>
+                                <Grid Margin="0,8,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="I am" Style="{StaticResource Body}" VerticalAlignment="Center" />
+                                    <ComboBox x:Name="CharacterBox" Grid.Column="1" MinWidth="180" Margin="10,0,0,0"
+                                              ToolTip="Your name in the sheet: the Raids tab shows whether you're in, and there's no reminder when you're marked absent." />
+                                </Grid>
+                                <TextBlock x:Name="ScheduleStatusText" Style="{StaticResource Muted}" Margin="0,8,0,0" FontSize="12" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource Inset}" Margin="0,12,0,0">
+                            <StackPanel>
                                 <TextBlock Text="In the background" Style="{StaticResource Heading}" />
                                 <CheckBox x:Name="AutostartBox" Content="Start with Windows" />
                                 <TextBlock x:Name="AutostartNote" Style="{StaticResource Muted}" Margin="26,6,0,0"
-                                           Text="BPGP Updater waits next to the clock and checks for a new BPGP every 6 hours. Minimizing always sends it there; double-click the icon to open it again." />
+                                           Text="BPGP Updater waits next to the clock, checks for a new BPGP every 6 hours and reminds you two hours before a raid. Minimizing always sends it there; double-click the icon to open it again." />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource Inset}" Margin="0,12,0,0">
+                            <StackPanel>
+                                <TextBlock Text="BPGP versions" Style="{StaticResource Heading}" />
+                                <CheckBox x:Name="BetaBox" Content="Get beta versions of BPGP" />
+                                <TextBlock x:Name="BetaNote" Style="{StaticResource Muted}" Margin="26,6,0,0"
+                                           Text="For officers who test a new BPGP before the raiders get it. Turned off, a beta you have stays until the next normal release replaces it." />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource Inset}" Margin="0,12,0,0">
+                            <StackPanel>
+                                <TextBlock Text="Backups of your BPGP settings" Style="{StaticResource Heading}" />
+                                <TextBlock Style="{StaticResource Muted}" Margin="0,0,0,8"
+                                           Text="Before every install, update, uninstall and restore, BPGP Updater copies your BPGP settings and data (BPGP.lua in the WTF folder). The last 5 copies are kept." />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <ComboBox x:Name="BackupBox" Grid.Column="0" />
+                                    <Button x:Name="RestoreButton" Grid.Column="1" Content="Restore…" Margin="8,0,0,0" MinWidth="0" />
+                                    <Button x:Name="OpenBackupsButton" Grid.Column="2" Content="Open folder" Margin="8,0,0,0" MinWidth="0" />
+                                </Grid>
+                                <TextBlock x:Name="BackupStatusText" Style="{StaticResource Muted}" Margin="0,8,0,0" FontSize="12" />
                             </StackPanel>
                         </Border>
                     </StackPanel>
+                    </ScrollViewer>
                 </TabItem>
 
                 <!-- About -->

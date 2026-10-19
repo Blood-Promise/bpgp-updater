@@ -111,11 +111,15 @@ namespace BPGPUpdater
         {
             var accounts = Path.Combine(retailFolder, "WTF", "Account");
             if (!Directory.Exists(accounts)) return new string[0];
-            return Directory.EnumerateFiles(accounts, AddonName + ".lua*", SearchOption.AllDirectories)
-                .Where(f => string.Equals(Path.GetFileName(Path.GetDirectoryName(f)), "SavedVariables", StringComparison.OrdinalIgnoreCase))
-                .Where(f => string.Equals(Path.GetFileName(f), AddonName + ".lua", StringComparison.OrdinalIgnoreCase)
-                         || string.Equals(Path.GetFileName(f), AddonName + ".lua.bak", StringComparison.OrdinalIgnoreCase))
-                .ToArray();
+            return Directory.EnumerateFiles(accounts, AddonName + ".lua*", SearchOption.AllDirectories).Where(IsSettingsFile).ToArray();
+        }
+
+        /// <summary>BPGP.lua or BPGP.lua.bak directly in a SavedVariables folder</summary>
+        public static bool IsSettingsFile(string path)
+        {
+            var name = Path.GetFileName(path);
+            return string.Equals(Path.GetFileName(Path.GetDirectoryName(path)), "SavedVariables", StringComparison.OrdinalIgnoreCase)
+                && (string.Equals(name, AddonName + ".lua", StringComparison.OrdinalIgnoreCase) || string.Equals(name, AddonName + ".lua.bak", StringComparison.OrdinalIgnoreCase));
         }
 
         /// <summary>Deletes BPGP's SavedVariables files. Returns how many were removed.</summary>

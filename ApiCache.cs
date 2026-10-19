@@ -23,6 +23,8 @@ namespace BPGPUpdater
     {
         /// <summary>Set when GitHub's limit was hit and a saved answer was used instead</summary>
         public DateTime? RateLimitedUntil { get; set; }
+        /// <summary>Set when a server other than GitHub couldn't be reached and its saved answer was used</summary>
+        public bool UsedSavedCopy { get; set; }
     }
 
     /// <summary>
@@ -30,22 +32,34 @@ namespace BPGPUpdater
     /// to reach. Every answer is saved with its ETag in %APPDATA%\BPGPUpdater\cache. The next request
     /// sends If-None-Match; an unchanged list comes back as 304 Not Modified, which GitHub doesn't count
     /// against the limit. When the limit is hit anyway, the saved answer is used.
+    /// The raid schedule (Google Sheets) goes through here too; its saved answer is also used offline.
     /// </summary>
     internal static class ApiCache
     {
         private static readonly string Folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "BPGPUpdater", "cache");
+        private const string GitHubApiHost = "api.github.com";
 
         public static byte[] Get(string url, FetchContext context)
         {
+            return Get(url, context, null);
+        }
+
+        /// <param name="contentType">
+        /// When set, an answer of another type is refused with InvalidDataException and not saved. Google
+        /// answers a sheet that isn't shared with its sign-in page instead of the CSV.
+        /// </param>
+        public static byte[] Get(string url, FetchContext context, string contentType)
+        {
+            bool gitHub = string.Equals(new Uri(url).Host, GitHubApiHost, StringComparison.OrdinalIgnoreCase);
             var key = Key(url);
-            var bodyFile = Path.Combine(Folder, key + ".json");
+            var bodyFile = Path.Combine(Folder, key + (gitHub ? ".json" : ".dat"));
             var etagFile = Path.Combine(Folder, key + ".etag");
             byte[] cached = TryRead(bodyFile);
             string etag = cached != null ? TryReadText(etagFile) : null;
 
             var request = (HttpWebRequest)WebRequest.Create(url);
             request.UserAgent = "BPGPUpdater/" + SelfUpdater.CurrentVersionText; // GitHub rejects requests without one
-            request.Accept = "application/vnd.github+json";
+            if (gitHub) request.Accept = "application/vnd.github+json";
             request.Timeout = 60000;
             if (!string.IsNullOrEmpty(etag)) request.Headers[HttpRequestHeader.IfNoneMatch] = etag;
 
@@ -55,6 +69,8 @@ namespace BPGPUpdater
                 using (var stream = response.GetResponseStream())
                 using (var memory = new MemoryStream())
                 {
+                    if (contentType != null && !(response.ContentType ?? "").StartsWith(contentType, StringComparison.OrdinalIgnoreCase))
+                        throw new InvalidDataException("Expected " + contentType + ", got " + (string.IsNullOrEmpty(response.ContentType) ? "something else" : response.ContentType) + ".");
                     stream.CopyTo(memory);
                     var body = memory.ToArray();
                     Save(bodyFile, etagFile, body, response.Headers[HttpResponseHeader.ETag]);
@@ -74,6 +90,12 @@ namespace BPGPUpdater
                 }
                 throw;
             }
+            catch (WebException) when (!gitHub && cached != null)
+            {
+                // No answer at all (offline, timeout): the last schedule beats none. GitHub keeps saying it can't be reached.
+                context.UsedSavedCopy = true;
+                return cached;
+            }
         }
 
         /// <summary>When GitHub refused because the limit is used up: the time it resets, else null</summary>
@@ -86,10 +108,13 @@ namespace BPGPUpdater
             return DateTimeOffset.FromUnixTimeSeconds(seconds).LocalDateTime;
         }
 
-        /// <summary>A file name for the URL: the repository and query, without characters Windows refuses</summary>
+        /// <summary>A file name for the URL: the repository and query (other hosts: also the host), without characters Windows refuses</summary>
         private static string Key(string url)
         {
-            var path = new Uri(url).PathAndQuery.Replace("/repos/", "");
+            var uri = new Uri(url);
+            var path = string.Equals(uri.Host, GitHubApiHost, StringComparison.OrdinalIgnoreCase)
+                ? uri.PathAndQuery.Replace("/repos/", "")
+                : uri.Host + uri.PathAndQuery;
             return new string(path.Select(c => char.IsLetterOrDigit(c) || c == '-' || c == '.' ? c : '_').ToArray());
         }
 

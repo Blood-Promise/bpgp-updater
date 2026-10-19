@@ -53,6 +53,8 @@ namespace BPGPUpdater
     internal sealed class LatestReleases
     {
         public Release Addon { get; set; }
+        /// <summary>Every usable addon release in the list, newest first (for the changelog)</summary>
+        public List<Release> AddonHistory { get; set; }
         public Release Updater { get; set; }
         /// <summary>Set when GitHub's limit was hit and the last saved answer was used</summary>
         public DateTime? RateLimitedUntil { get; set; }
@@ -86,9 +88,11 @@ namespace BPGPUpdater
         public static LatestReleases GetLatest(bool includePreReleases)
         {
             var context = new FetchContext();
+            var addon = Usable(AddonRepository, includePreReleases, r => r.AddonZip != null, context);
             var latest = new LatestReleases
             {
-                Addon = Newest(AddonRepository, includePreReleases, r => r.AddonZip != null, context),
+                Addon = addon.FirstOrDefault(),
+                AddonHistory = addon,
                 Updater = TryNewest(UpdaterRepository, includePreReleases, r => r.UpdaterExe != null, context),
             };
             latest.RateLimitedUntil = context.RateLimitedUntil;
@@ -100,7 +104,7 @@ namespace BPGPUpdater
         {
             try
             {
-                return Newest(repository, includePreReleases, usable, context);
+                return Usable(repository, includePreReleases, usable, context).FirstOrDefault();
             }
             catch (Exception e) when (e is WebException || e is IOException || e is SerializationException || e is RateLimitException)
             {
@@ -108,13 +112,14 @@ namespace BPGPUpdater
             }
         }
 
-        private static Release Newest(string repository, bool includePreReleases, Func<Release, bool> usable, FetchContext context)
+        /// <summary>The releases that can be installed, newest first</summary>
+        private static List<Release> Usable(string repository, bool includePreReleases, Func<Release, bool> usable, FetchContext context)
         {
             var releases = Deserialize<List<Release>>(ApiCache.Get("https://api.github.com/repos/" + repository + "/releases?per_page=50", context));
             return releases
                 .Where(r => !r.Draft && (includePreReleases || !r.PreRelease) && r.Version != null && usable(r))
                 .OrderByDescending(r => r.Version)
-                .FirstOrDefault();
+                .ToList();
         }
 
         /// <summary>
